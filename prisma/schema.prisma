@@ -8,19 +8,27 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  phone     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String          @id @default(uuid())
+  name             String
+  email            String          @unique
+  password         String
+  phone            String
+  stripeCustomerId String?
+  payments         Subscriptions[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@map("users")
 }
 
-model Payment {
+model Subscriptions {
   id        String   @id @default(uuid())
   price     Decimal
   status    Boolean
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("subscriptions")
 }
