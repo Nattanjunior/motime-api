@@ -25,11 +25,14 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.2.5",
     "@prisma/client": "^7.2.0",
     "@sendgrid/mail": "^8.1.6",
+    "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "stripe": "^20.1.2",
     "twilio": "^5.11.2"
   },
   "devDependencies": {
