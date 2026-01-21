@@ -21,10 +21,15 @@ model User {
   @@map("users")
 }
 
+enum SubscriptionStatus {
+  active
+  inactive
+}
+
 model Subscriptions {
   id        String   @id @default(uuid())
   price     Decimal
-  status    Boolean
+  status    SubscriptionStatus  @default(active)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
