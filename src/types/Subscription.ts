@@ -1,5 +1,5 @@
-import type Stripe from "stripe";
+import type Stripe from 'stripe';
 
 export interface Subscription {
-  subscription: Stripe.Subscription
+  subscription: Stripe.Subscription;
 }
