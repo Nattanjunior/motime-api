@@ -5,7 +5,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-   const config = new DocumentBuilder()
+  const config = new DocumentBuilder()
     .setTitle('Moti-Me API')
     .setDescription('The Moti-Me API description')
     .setVersion('1.0')
