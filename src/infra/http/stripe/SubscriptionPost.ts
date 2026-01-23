@@ -1,6 +1,6 @@
 import { Prisma } from 'generated/prisma/browser';
 import { SubscriptionStatus } from 'generated/prisma/enums';
-import type { SubscriptionRepository } from 'src/domain/subscription/SubscriptionRepository';
+import type { SubscriptionRepository } from 'src/domain/gateways/stripe/SubscriptionRepository';
 import { PrismaService } from 'src/infra/database/prisma/prisma.service';
 import { stripe } from 'src/lib/stripe';
 
@@ -22,7 +22,7 @@ export class SubscriptionPost implements SubscriptionRepository {
         email: userEmail.email,
       });
 
-      const subscription = await stripe.subscriptions.create({
+      await stripe.subscriptions.create({
         customer: customer.id,
         items: [
           {
@@ -33,14 +33,6 @@ export class SubscriptionPost implements SubscriptionRepository {
         expand: ['latest_invoice.payment_intent'],
       });
 
-      await this.prisma.subscriptions.create({
-        data: {
-          userId,
-          stripeSubscriptionId: subscription.id,
-          price: new Prisma.Decimal('0'),
-          status: SubscriptionStatus.active,
-        },
-      });
     } catch (error) {
       throw new Error('Error creating subscription');
     }
