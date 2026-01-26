@@ -1,28 +1,30 @@
 import { RabbitMQConnection } from '../rabbitmq.connection';
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class SubsWorker implements OnModuleInit {
+  private readonly logger = new Logger(SubsWorker.name);
+
   constructor(
-    // private readonly handler: SubsEventHandler,
     private readonly rabbit: RabbitMQConnection,
-  ) { }
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async onModuleInit() {
-    console.log('SubsWorker initializing...');
+    this.logger.log('SubsWorker initializing...');
     await this.start();
-    console.log('SubsWorker started.');
+    this.logger.log('SubsWorker started.');
   }
 
   async start() {
     try {
       const channel = await this.rabbit.getChannel();
-      const exchange = 'subs.request';
-      const queue = 'subs.queue';
-      const routingKey = 'subs.key';
+      const exchange = 'domain-events';
+      const queue = 'domain-events.subs';
+      const routingKey = 'Subscription*';
 
-      await channel.assertExchange(exchange, 'direct', { durable: true });
+      await channel.assertExchange(exchange, 'topic', { durable: true });
       await channel.assertQueue(queue, { durable: true });
 
       await channel.bindQueue(queue, exchange, routingKey);
@@ -30,17 +32,27 @@ export class SubsWorker implements OnModuleInit {
       channel.consume(queue, async (msg) => {
         if (!msg) return;
 
-        const data = JSON.parse(msg.content.toString());
-
         try {
-          // await this.handler.handle(data);
+          const content = JSON.parse(msg.content.toString());
+          this.logger.log(
+            `Processing event: ${content.eventName} (${content.aggregateId})`,
+          );
+
+          // Emit event to application handlers
+          this.eventEmitter.emit(content.eventName, content.data);
+
           channel.ack(msg);
+          this.logger.log(`Event processed: ${content.eventName}`);
         } catch (err) {
-          channel.nack(msg);
+          this.logger.error(
+            `Error processing event: ${err.message}`,
+            err.stack,
+          );
+          channel.nack(msg, false, true); // Requeue on error
         }
       });
     } catch (err) {
-      console.error('Error starting RabbitmqWorker:', err);
+      this.logger.error('Error starting RabbitmqWorker:', err);
     }
   }
 }

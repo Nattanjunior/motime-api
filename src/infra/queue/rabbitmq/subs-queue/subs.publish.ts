@@ -1,24 +1,51 @@
-import type { EventPublisher } from 'src/domain/rabbitmq/publish';
+import { Injectable, Logger } from '@nestjs/common';
+import { IEventPublisher } from 'src/domain/events/IEventPublisher';
+import { IDomainEvent } from 'src/domain/events/IDomainEvent';
 import { RabbitMQConnection } from '../rabbitmq.connection';
-import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export class SubsQueuePublisher implements EventPublisher {
-  constructor(private readonly rabbit: RabbitMQConnection) { }
+export class SubsQueuePublisher implements IEventPublisher {
+  private readonly logger = new Logger(SubsQueuePublisher.name);
 
-  async publish(event: string) {
-    const channel = await this.rabbit.getChannel();
+  constructor(private readonly rabbit: RabbitMQConnection) {}
 
-    const exchange = 'subs.request';
-    const routingKey = 'subs.key';
+  async publish(event: IDomainEvent): Promise<void> {
+    try {
+      const channel = await this.rabbit.getChannel();
+      const exchange = 'domain-events';
+      const routingKey = event.getEventName();
 
-    await channel.assertExchange(exchange, 'direct', { durable: true });
+      await channel.assertExchange(exchange, 'topic', { durable: true });
 
-    channel.publish(
-      exchange,
-      routingKey,
-      Buffer.from(JSON.stringify(event)),
-      { persistent: true },
-    );
+      const messagePayload = {
+        eventName: event.getEventName(),
+        aggregateId: event.getAggregateId(),
+        occurredAt: event.getOccurredAt(),
+        data: event,
+      };
+
+      channel.publish(
+        exchange,
+        routingKey,
+        Buffer.from(JSON.stringify(messagePayload)),
+        { persistent: true },
+      );
+
+      this.logger.log(
+        `Event published: ${event.getEventName()} (${event.getAggregateId()})`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to publish event: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async publishBatch(events: IDomainEvent[]): Promise<void> {
+    for (const event of events) {
+      await this.publish(event);
+    }
   }
 }
