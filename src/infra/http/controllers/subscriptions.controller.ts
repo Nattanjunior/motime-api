@@ -5,15 +5,21 @@ import {
   Body,
   Param,
   UseGuards,
-  Request,
   HttpCode,
 } from '@nestjs/common';
 import { CreatedSubsUseCase } from '../../application/use-cases/subscription/createdSubsUseCase';
-import { CreateSubscriptionDto } from '../../interfaces/dtos/CreateSubscription.dto';
+import {
+  CreateSubscriptionDto,
+  validateCreateSubscriptionDto,
+} from '../../interfaces/dtos/CreateSubscription.dto';
 import { SubscriptionResponseDto } from '../../interfaces/dtos/SubscriptionResponse.dto';
 import { SubscriptionRepository } from '../../domain/prisma/subscription.repository';
+import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
+import { CurrentUser } from '../../shared/decorators/current-user.decorator';
+import { BadRequestException } from '../../shared/exceptions/custom.exceptions';
 
 @Controller('subscriptions')
+@UseGuards(JwtAuthGuard)
 export class SubscriptionsController {
   constructor(
     private readonly createdSubsUseCase: CreatedSubsUseCase,
@@ -24,9 +30,14 @@ export class SubscriptionsController {
   @HttpCode(201)
   async create(
     @Body() createSubscriptionDto: CreateSubscriptionDto,
-    @Request() req: any,
+    @CurrentUser() user: any,
   ): Promise<SubscriptionResponseDto> {
-    const userId = req.user.sub; // From JWT token
+    const errors = validateCreateSubscriptionDto(createSubscriptionDto);
+    if (errors.length > 0) {
+      throw new BadRequestException(errors.join(', '));
+    }
+
+    const userId = user.userId;
     const subscription = await this.createdSubsUseCase.execute({
       userId,
       priceId: createSubscriptionDto.priceId,
@@ -42,21 +53,18 @@ export class SubscriptionsController {
   }
 
   @Get()
-  async findAll(@Request() req: any): Promise<SubscriptionResponseDto[]> {
-    const userId = req.user.sub;
-    // This would need a method to get subscriptions by user ID
-    // Placeholder for future implementation
+  async findAll(@CurrentUser() user: any): Promise<SubscriptionResponseDto[]> {
+    const userId = user.userId;
+    // TODO: Implement get all subscriptions for user
     return [];
   }
 
   @Get(':id')
   async findOne(
     @Param('id') id: string,
-    @Request() req: any,
+    @CurrentUser() user: any,
   ): Promise<SubscriptionResponseDto> {
-    const userId = req.user.sub;
-    // This would need a method to get a subscription by ID and verify ownership
-    // Placeholder for future implementation
+    // TODO: Implement get subscription by ID with ownership check
     return {} as SubscriptionResponseDto;
   }
 }
